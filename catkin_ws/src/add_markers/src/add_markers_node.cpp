@@ -1,9 +1,17 @@
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Odometry.h>
+#include <iostream> 
 
 double pick_up_goal[2] = {2, 3};
 double drop_off_goal[2] = {13, 3.3};
+double distance_threshold = 0.25;
+bool pick_up = false;
+bool drop_off = false;
+bool at_pick_up = false;
+bool at_drop_off = false;
+
+
 
 void changeMarkerStatus(visualization_msgs::Marker& marker, bool flag){
     if(flag){
@@ -69,54 +77,89 @@ void publishMarker(visualization_msgs::Marker& marker, ros::Publisher& marker_pu
       ROS_WARN_ONCE("Please create a subscriber to the marker");
       sleep(1);
     }
-    ROS_INFO("Pick up marker");
     marker_pub.publish(marker);
 }
 
 void odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
+    //ROS_INFO("OdomCallback");
+    float pose_x = msg->pose.pose.position.x;
+    float pose_y = msg->pose.pose.position.y;
+    // Position tolerance
+    double distance;
+
+    if (pick_up){
+        ROS_INFO("Distance to pickup");
+        distance = sqrt(pow(pose_x - pick_up_goal[0], 2) + pow(pose_y - pick_up_goal[1], 2));
+        std::cout << distance << std::endl;
+        std::cout << "x: " << pose_x << " : " << pick_up_goal[0] << std::endl;
+        std::cout << "y: " << pose_y << " : " << pick_up_goal[1] << std::endl;
+        if (distance < distance_threshold){
+	  at_pick_up = true;
+          pick_up = false;
+	}
+    }
+    else if (drop_off){
+        ROS_INFO("Distance to dropoff");
+        distance = sqrt(pow(pose_x - drop_off_goal[0], 2) + pow(pose_y - drop_off_goal[1], 2));
+        std::cout << distance << std::endl;
+        if (distance < distance_threshold){
+	  at_drop_off = true;
+          drop_off = false;
+        }
+    }
 }
 
 int main( int argc, char** argv )
 {
-  ros::init(argc, argv, "basic_shapes");
+  ros::init(argc, argv, "add_markers");
   ros::NodeHandle n;
   ros::Rate r(1);
   ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
-  //ros::Subscriber odom_sub = n.subscribe("/odom", 1000, odomCallback);
-
+  ros::Subscriber odom_sub = n.subscribe("odom", 1, odomCallback);
+  pick_up = true;
   // Set our initial shape type to be a cube
-  uint32_t shape = visualization_msgs::Marker::SPHERE;
-
+    uint32_t shape = visualization_msgs::Marker::SPHERE;
+    visualization_msgs::Marker marker = createMarker(shape);
+    ROS_INFO("Pick up marker");
+    ROS_INFO("1");
+    setMarkersPose(marker, pick_up_goal[0], pick_up_goal[1], 0.0, 1.0);
+    //Publish marker
+    
+  
   while (ros::ok())
   {
-    visualization_msgs::Marker marker = createMarker(shape);
-    setMarkersPose(marker, pick_up_goal[0], pick_up_goal[1], 0.0, 1.0);
+    ros::spinOnce();
     
-    //Publish marker
-    publishMarker(marker, marker_pub);
-    
-    // Wait 5 seconds
-    ros::Duration(5.0).sleep();
-    
-    // Delete marker
-    changeMarkerStatus(marker, false);
-    publishMarker(marker, marker_pub);
-    ROS_INFO("Object has been picked up, hidding marker");
+    if (pick_up){
+      publishMarker(marker, marker_pub);
+    }
+    else if (at_pick_up){
+	  // Delete marker
+          ROS_INFO("2");
+          changeMarkerStatus(marker, false);
+          publishMarker(marker, marker_pub);
+          ROS_INFO("Object has been picked up, hidding marker");
+          // Wait 5 seconds
+          ros::Duration(5.0).sleep();
+          drop_off = true;
+          //Set drop off marker
+          setMarkersPose(marker, drop_off_goal[0], drop_off_goal[1], 0.0, 1.0);
+          changeMarkerStatus(marker, true);
+          publishMarker(marker, marker_pub);
+          ROS_INFO("Drop off marker");
+	  at_pick_up = false;
 
-    // Wait 5 seconds
-    ros::Duration(5.0).sleep();
-   
-    //Set drop off marker
-    setMarkersPose(marker, drop_off_goal[0], drop_off_goal[1], 0.0, 1.0);
-    changeMarkerStatus(marker, true);
-    publishMarker(marker, marker_pub);
-    ROS_INFO("Drop off marker");
-    
-    // Wait 5 seconds
-    ros::Duration(5.0).sleep();
-
-    ROS_INFO("Tasks finished");     
-    //return 0;
-    r.sleep();
+    }
+    else if (at_drop_off){
+          ROS_INFO("3");
+          // Delete marker
+          changeMarkerStatus(marker, false);
+          publishMarker(marker, marker_pub);
+          drop_off = false;
+          ROS_INFO("Object has been drop off, hidding marker");
+          ROS_INFO("Tasks finished"); 
+          ros::Duration(5.0).sleep();    
+          return 0;
+          }
    }
  }
