@@ -108,7 +108,7 @@ int main( int argc, char** argv )
     ros::Duration(5.0).sleep();
 
     ROS_INFO("Tasks finished");     
-    return 0;
-    //r.sleep();
+    //return 0;
+    r.sleep();
    }
  }
