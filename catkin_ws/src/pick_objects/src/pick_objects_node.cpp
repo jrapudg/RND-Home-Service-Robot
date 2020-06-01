@@ -33,8 +33,8 @@ int main(int argc, char** argv){
   }
 
  
-  move_base_msgs::MoveBaseGoal pick_up_goal = define_goal(1.0, 1.0, 1.0);
-  move_base_msgs::MoveBaseGoal drop_off_goal = define_goal(2.0, 2.0, 1.5);
+  move_base_msgs::MoveBaseGoal pick_up_goal = define_goal(2.0, 3.0, -1.7172);
+  move_base_msgs::MoveBaseGoal drop_off_goal = define_goal(13.0, 3.3, 1.7172);
   
 
    // Send the goal position and orientation for the robot to reach
