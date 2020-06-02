@@ -6,6 +6,7 @@
 double pick_up_goal[2] = {2, 3};
 double drop_off_goal[2] = {13, 3.3};
 double distance_threshold = 0.25;
+
 bool pick_up = false;
 bool drop_off = false;
 bool at_pick_up = false;
@@ -45,14 +46,49 @@ visualization_msgs::Marker createMarker(uint32_t shape){
     marker.scale.z = 0.5;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = 1.0f;
-    marker.color.g = 0.0f;
+    marker.color.r = 0.0f;
+    marker.color.g = 1.0f;
     marker.color.b = 0.0f;
     marker.color.a = 1.0;
 
     marker.lifetime = ros::Duration();
     
     return marker;
+}
+
+void changeColorShape(visualization_msgs::Marker& marker, uint32_t shape, char color){
+    // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+    marker.type = shape;
+    
+    if (color == 'r'){
+      // Set the color -- be sure to set alpha to something non-zero!
+      marker.color.r = 1.0f;
+      marker.color.g = 0.0f;
+      marker.color.b = 0.0f;
+      marker.color.a = 1.0;
+    }
+    else if (color == 'g'){
+      // Set the color -- be sure to set alpha to something non-zero!
+      marker.color.r = 0.0f;
+      marker.color.g = 1.0f;
+      marker.color.b = 0.0f;
+      marker.color.a = 1.0;
+    }
+    else if (color == 'b'){
+      // Set the color -- be sure to set alpha to something non-zero!
+      marker.color.r = 0.0f;
+      marker.color.g = 0.0f;
+      marker.color.b = 1.0f;
+      marker.color.a = 1.0;
+    } 
+    else{
+      // Set the color -- be sure to set alpha to something non-zero!
+      marker.color.r = 1.0f;
+      marker.color.g = 0.0f;
+      marker.color.b = 0.0f;
+      marker.color.a = 1.0;
+    }  
+
 }
 
 void setMarkersPose(visualization_msgs::Marker& marker, double x, double y, double angle_z, double angle_w){
@@ -91,8 +127,6 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
         ROS_INFO("Distance to pickup");
         distance = sqrt(pow(pose_x - pick_up_goal[0], 2) + pow(pose_y - pick_up_goal[1], 2));
         std::cout << distance << std::endl;
-        std::cout << "x: " << pose_x << " : " << pick_up_goal[0] << std::endl;
-        std::cout << "y: " << pose_y << " : " << pick_up_goal[1] << std::endl;
         if (distance < distance_threshold){
 	  at_pick_up = true;
           pick_up = false;
@@ -115,17 +149,14 @@ int main( int argc, char** argv )
   ros::NodeHandle n;
   ros::Rate r(1);
   ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
-  ros::Subscriber odom_sub = n.subscribe("odom", 1, odomCallback);
+  ros::Subscriber odom_sub = n.subscribe("odom", 100, odomCallback);
   pick_up = true;
   // Set our initial shape type to be a cube
-    uint32_t shape = visualization_msgs::Marker::SPHERE;
-    visualization_msgs::Marker marker = createMarker(shape);
-    ROS_INFO("Pick up marker");
-    ROS_INFO("1");
-    setMarkersPose(marker, pick_up_goal[0], pick_up_goal[1], 0.0, 1.0);
-    //Publish marker
+  uint32_t shape = visualization_msgs::Marker::SPHERE;
+  visualization_msgs::Marker marker = createMarker(shape);
+  ROS_INFO("Pick up marker");
+  setMarkersPose(marker, pick_up_goal[0], pick_up_goal[1], 0.0, 1.0);
     
-  
   while (ros::ok())
   {
     ros::spinOnce();
@@ -135,7 +166,6 @@ int main( int argc, char** argv )
     }
     else if (at_pick_up){
 	  // Delete marker
-          ROS_INFO("2");
           changeMarkerStatus(marker, false);
           publishMarker(marker, marker_pub);
           ROS_INFO("Object has been picked up, hidding marker");
@@ -145,15 +175,16 @@ int main( int argc, char** argv )
           //Set drop off marker
           setMarkersPose(marker, drop_off_goal[0], drop_off_goal[1], 0.0, 1.0);
           changeMarkerStatus(marker, true);
+          changeColorShape(marker, visualization_msgs::Marker::CUBE , 'r');
           publishMarker(marker, marker_pub);
           ROS_INFO("Drop off marker");
 	  at_pick_up = false;
 
     }
     else if (at_drop_off){
-          ROS_INFO("3");
           // Delete marker
-          changeMarkerStatus(marker, false);
+          //changeMarkerStatus(marker, false);
+          changeColorShape(marker, visualization_msgs::Marker::SPHERE , 'g');
           publishMarker(marker, marker_pub);
           drop_off = false;
           ROS_INFO("Object has been drop off, hidding marker");
